@@ -25,14 +25,15 @@ tfds.disable_progress_bar()
 # =============================================================================
 
 def tfds2tuple(ds, size, desc):
-    # Convert tf.data.Dataset.to 1 tuple of 2 lists
     src_lst = []
     trg_lst = []
+    
     for example in tqdm(tfds.as_numpy(ds), desc):
-        src = example['article']
-        trg = example['highlights']
-        src_lst.append(src.decode("utf-8"))
-        trg_lst.append(trg.decode("utf-8"))
+        # Perform text cleaning
+        src = clean_src(example['article'].decode("utf-8"))
+        trg = clean_src(example['highlights'].decode("utf-8"))
+        src_lst.append(src)
+        trg_lst.append(trg)
         if len(src_lst) == len(trg_lst) == size:
             break
     return src_lst, trg_lst
@@ -43,9 +44,9 @@ def load_tfds(ds_name, sizes):
     valid_ds = ds['validation']
     test_ds = ds['test']
     train_size, valid_size, test_size = sizes
-    train_ds = tfds2tuple(train_ds, train_size, desc='Re-establishing training dataset...')
-    valid_ds = tfds2tuple(valid_ds, valid_size, desc='Re-establishing validation dataset...')
-    test_ds = tfds2tuple(test_ds, test_size, desc='Re-establishing testing dataset...')
+    train_ds = tfds2tuple(train_ds, train_size, desc='Loading and cleaning training dataset...')
+    valid_ds = tfds2tuple(valid_ds, valid_size, desc='Loading and cleaning validation dataset...')
+    test_ds = tfds2tuple(test_ds, test_size, desc='Loading and cleaning testing dataset...')
     return (train_ds, valid_ds, test_ds)
 
 # =============================================================================
@@ -60,13 +61,13 @@ def save_object(obj, obj_name):
     print('Saving {} into pickle...'.format(obj_name))
     pickle.dump(obj, save_path)
     save_path.close()
-    print('Saved {} into pickle'.format(obj_name))
+    print('Saved ' + obj_name + '.pickle')
     
 def load_object(obj_name):
     load_path = open(obj_name + '.pickle', 'rb')
     print('Loading {} from pickle...'.format(obj_name))
     obj = pickle.load(load_path)
-    print('Loaded {} from pickle'.format(obj_name))
+    print('Loaded ' + obj_name + '.pickle')
     return obj
 
 def save_model():
@@ -128,33 +129,20 @@ def clean_bracket(sentence):
     sentence = re.sub("\([(\d|\D)]+\)", '', sentence)
     return sentence
     
-def clean_src(lst):
-    clean = []
-    for sentence in tqdm(lst):
-        sentence = contraction_map(sentence)
-        sentence = clean_cnn(sentence)
-        sentence = clean_author(sentence)
-        sentence = clean_publish(sentence)
-        sentence = clean_update(sentence)
-        sentence = clean_bracket(sentence)
-        sentence = clean_punct(sentence)
-        sentence = sentence.lower()
-        clean.append(sentence.split())
-    return clean
+def clean_src(sentence):
+    sentence = contraction_map(sentence)
+    sentence = clean_cnn(sentence)
+    sentence = clean_author(sentence)
+    sentence = clean_publish(sentence)
+    sentence = clean_update(sentence)
+    sentence = clean_bracket(sentence)
+    sentence = clean_punct(sentence)
+    return sentence.lower().split()
 
-def clean_trg(lst):
-    clean = []
-    for sentence in tqdm(lst):
-        sentence = contraction_map(sentence)
-        sentence = clean_bracket(sentence)
-        sentence = clean_punct(sentence)
-        sentence = sentence.lower()
-        clean.append(sentence.split())
-    return clean
+def clean_trg(sentence):
+    sentence = contraction_map(sentence)
+    sentence = clean_bracket(sentence)
+    sentence = clean_punct(sentence)
+    return sentence.lower().split()
 
-def clean_ds(ds):
-    src_lst, trg_lst = ds
-    src_lst = clean_src(src_lst)
-    trg_lst = clean_trg(trg_lst)
-    return src_lst, trg_lst
 

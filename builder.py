@@ -44,8 +44,8 @@ def build_vocab(ds, max_size=30000, min_freq=2):
     vocab_dict = vocab.word2count.items()
     
     # Trim vocab
-    vocab_dict = sorted([(word, count) for (word, count) in tqdm(vocab_dict, desc=sorting_vocab)], key=lambda x: x[1], reverse=True)
-    
+    vocab_dict = [(word, count) for (word, count) in tqdm(vocab_dict, desc=sorting_vocab)]
+    vocab_dict= sorted(vocab_dict, key=lambda x: x[1], reverse=True)
     if max_size < len(vocab_dict):
         vocab_dict = vocab_dict[:max_size]
     
