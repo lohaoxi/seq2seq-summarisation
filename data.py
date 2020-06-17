@@ -1,10 +1,10 @@
 import tensorflow_datasets as tfds
 from tqdm import tqdm
-import pandas as pd
 import urllib3
 from contraction import contraction_map
 import re
 import pickle
+# from contraction import contraction_map
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 tfds.disable_progress_bar()
@@ -20,19 +20,22 @@ tfds.disable_progress_bar()
 #     return tqdm_base(*args, **kwargs)
 # =============================================================================
 
-def tfds2pddf(ds, size, desc):
-    # Convert tf.data.Dataset.to pd.DataFrame
-    srcs = []
-    trgs = []
-    for example in tqdm(tfds.as_numpy(ds), desc=desc):
+# =============================================================================
+# Tensorflow dataset loading
+# =============================================================================
+
+def tfds2tuple(ds, size, desc):
+    # Convert tf.data.Dataset.to 1 tuple of 2 lists
+    src_lst = []
+    trg_lst = []
+    for example in tqdm(tfds.as_numpy(ds), desc):
         src = example['article']
         trg = example['highlights']
-        srcs.append(src.decode("utf-8"))
-        trgs.append(trg.decode("utf-8"))
-        if len(srcs) == len(trgs) == size:
+        src_lst.append(src.decode("utf-8"))
+        trg_lst.append(trg.decode("utf-8"))
+        if len(src_lst) == len(trg_lst) == size:
             break
-    df = pd.DataFrame({'src': srcs, 'trg': trgs})
-    return df
+    return src_lst, trg_lst
 
 def load_tfds(ds_name, sizes):
     ds, info = tfds.load(ds_name, with_info=True)
@@ -40,10 +43,10 @@ def load_tfds(ds_name, sizes):
     valid_ds = ds['validation']
     test_ds = ds['test']
     train_size, valid_size, test_size = sizes
-    train_df = tfds2pddf(train_ds, train_size, desc='Loading training dataframe...')
-    valid_df = tfds2pddf(valid_ds, valid_size, desc='Loading validation dataframe...')
-    test_df = tfds2pddf(test_ds, test_size, desc='Loading testing dataframe...')
-    return (train_df, valid_df, test_df)
+    train_ds = tfds2tuple(train_ds, train_size, desc='Re-establishing training dataset...')
+    valid_ds = tfds2tuple(valid_ds, valid_size, desc='Re-establishing validation dataset...')
+    test_ds = tfds2tuple(test_ds, test_size, desc='Re-establishing testing dataset...')
+    return (train_ds, valid_ds, test_ds)
 
 # =============================================================================
 # Data Saving
@@ -53,15 +56,11 @@ def save_object(obj, obj_name):
     # Input: obj: object
     #        obj_name: str
     # Save an objet into a pickle
-    # DataFrame: df = (train_df, valid_df, test_df)
-    # Configuration: train_size, valid_size, test_size, vocab_size, min_freq, batch_size
-    # Dataset: train_dataset, valid_dataset, test_dataset
-    # Vocab
     save_path = open(obj_name + '.pickle', 'wb')
     print('Saving {} into pickle...'.format(obj_name))
     pickle.dump(obj, save_path)
     save_path.close()
-    print('Saved {} into pickle...'.format(obj_name))
+    print('Saved {} into pickle'.format(obj_name))
     
 def load_object(obj_name):
     load_path = open(obj_name + '.pickle', 'rb')
@@ -140,7 +139,7 @@ def clean_src(lst):
         sentence = clean_bracket(sentence)
         sentence = clean_punct(sentence)
         sentence = sentence.lower()
-        clean.append(sentence)
+        clean.append(sentence.split())
     return clean
 
 def clean_trg(lst):
@@ -150,15 +149,12 @@ def clean_trg(lst):
         sentence = clean_bracket(sentence)
         sentence = clean_punct(sentence)
         sentence = sentence.lower()
-        clean.append(sentence)
+        clean.append(sentence.split())
     return clean
 
-def clean_df(df):
-    
-    src_lst = df.src.tolist()
-    trg_lst = df.trg.tolist()
-    srcs = clean_src(src_lst)
-    trgs = clean_trg(trg_lst)
-    df = pd.DataFrame({'src': srcs, 'trg': trgs})
-    return df
+def clean_ds(ds):
+    src_lst, trg_lst = ds
+    src_lst = clean_src(src_lst)
+    trg_lst = clean_trg(trg_lst)
+    return src_lst, trg_lst
 
