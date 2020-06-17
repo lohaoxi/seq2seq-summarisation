@@ -1,89 +1,70 @@
 # Purpose: create train_iter, valid_iter, test_iter and vocab
-import torch
-from data import load_tfds, clean_df
-from utils import Dataset
-import pickle
+from data import load_tfds, clean_ds, save_object
+from builder import build_vocab, build_iter
+import time
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+start = time.time()
+print('\n')
+
 ds_name = 'cnn_dailymail'
-
-
-TRAIN_SIZE = -1
-VALID_SIZE = -1
-TEST_SIZE = -1
-VOCAB_SIZE = None
+SIZES = (-1, -1, -1) # train_size, valid_size, test_size
+MAX_VOCAB_SIZE = 30000
 VOCAB_MIN_FREQ = 5
-BATCH_SIZE = 4
+BATCH_SIZE = 8
+SORT_ITER = True
+TORCH_TENSOR = True
+
+param = [ds_name, SIZES, MAX_VOCAB_SIZE, VOCAB_MIN_FREQ, BATCH_SIZE, SORT_ITER, TORCH_TENSOR]
+param_name = ['ds_name', 'SIZES', 'MAX_VOCAB_SIZE', 'VOCAB_MIN_FREQ', 'BATCH_SIZE', 'SORT_ITER', 'TORCH_TENSOR']
+for i in range(len(param)):
+    print(param_name[i], ' = ', param[i])
+    
+# Load tfds.dataset
+print('Loading {} tensorflow dataset...'.format(ds_name))
+train_ds, valid_ds, test_ds = load_tfds(ds_name, sizes=SIZES)
+print('Number of training examples: {}'.format(len(train_ds[0])))
+print('Number of validation examples: {}'.format(len(valid_ds[0])))
+print('Number of testing examples: {}'.format(len(test_ds[0])))
+all_ds = [train_ds, valid_ds, test_ds]
+
+# Data Cleaning
+print('\nCleaning dataset')
+all_ds = [clean_ds(ds) for ds in all_ds]
+print('Cleaned dataset')
+
+# Prepare Vocab 
+print('\nBuilding vocab')
+train_ds, valid_ds, test_ds = all_ds
+vocab = build_vocab(train_ds, max_size=MAX_VOCAB_SIZE, min_freq=VOCAB_MIN_FREQ)
+print('Built vocab, vocab_size = {}'.format(vocab.n_words - 4))
+
+# Prepare Iterator
+print('\nBuilding train iterator')
+train_iter = build_iter(train_ds, vocab, batch_size=BATCH_SIZE, sort=SORT_ITER, torch_tensor=TORCH_TENSOR)
+print('Built train iterators, batch size = {}, number of batches: {}'.format(BATCH_SIZE, len(train_iter)))
+
+print('\nBuilding valid iterator')
+valid_iter = build_iter(valid_ds, vocab, batch_size=BATCH_SIZE, sort=SORT_ITER, torch_tensor=TORCH_TENSOR)
+print('Built valid iterators, batch size = {}, number of batches: {}'.format(BATCH_SIZE, len(valid_iter)))
+
+print('\nBuilding test iterator')
+test_iter = build_iter(test_ds, vocab, batch_size=BATCH_SIZE, sort=SORT_ITER, torch_tensor=TORCH_TENSOR)
+print('Built test iterators, batch size = {}, number of batches: {}'.format(BATCH_SIZE, len(test_iter)))
+
+print('Built all 3 iterators')
 
 
-if __name__ == '__main__':
-    
-    # Define saving name:
-    train_iter_dir = ds_name + '_train_iter'
-    valid_iter_dir = ds_name + '_valid_iter'
-    test_iter_dir = ds_name + '_test_iter'
-    all_iter_dir = [train_iter_dir, valid_iter_dir, test_iter_dir]
-    vocab_dir = ds_name + '_vocab'
-    
-    # Load tfds.dataset and convert to pd.DataFrame
-    sizes = (TRAIN_SIZE, VALID_SIZE, TEST_SIZE)
-    print('Loading {} tensorflow dataset...'.format(ds_name))
-    (train_df, valid_df, test_df) = load_tfds(ds_name, sizes)
-    print('Number of training examples: {}'.format(train_df.shape[0]))
-    print('Number of validation examples: {}'.format(valid_df.shape[0]))
-    print('Number of testing examples: {}'.format(test_df.shape[0]))
-    all_df = [train_df, valid_df, test_df]
-
-    
-    # Data Cleaning
-    print('Cleaning dataframe')
-    for df in all_df:
-        df = clean_df(df)
-
-    # Prepare custom dataset
-    all_ds = [0] * len(all_df)
-    for i in range(len(all_ds)):
-        # Convert pd.DataFrame to custom dataset
-        print('Convert to custom dataset {}...'.format(all_iter_dir[i]))
-        ds = Dataset(all_df[i])
-        all_ds[i] = ds
-    train_ds, valid_ds, test_ds = all_ds
-    
-    # Prepare Vocab 
-    print('Building vocab')
-    vocab = train_ds.build_vocab(vocab_size=VOCAB_SIZE, min_freq=VOCAB_MIN_FREQ)
-        
-    # Prepare data iterator and generator
-    all_iter = [0] * len(all_ds)
-    for i in range(len(all_ds)):
-        # Build data iterator for custom dataset
-        print('Building data iterator for {} ...'.format(all_iter_dir[i]))
-        all_iter[i] = all_ds[i].build_iterator(vocab=vocab, batch_size=BATCH_SIZE)
-        
-    # Save object as pickle
-    preprocessed_data = {
-        'preprocess_param': dict(zip(('tfds_name', 
-                                      'train_size', 
-                                      'valid_size', 
-                                      'test_size', 
-                                      'vocab_size', 
-                                      'vocab_min_freq', 
-                                      'batch_size'), 
-                                     (ds_name, 
-                                      TRAIN_SIZE, 
-                                      VALID_SIZE, 
-                                      TEST_SIZE, 
-                                      VOCAB_SIZE, 
-                                      VOCAB_MIN_FREQ, 
-                                      BATCH_SIZE))),
+# Save object as pickle
+print('\n')
+preprocessed = {
+        'param': param,
         'vocab': vocab,
-        'train_iterator': all_iter[0],
-        'valid_iterator': all_iter[1],
-        'test_iterator': all_iter[2],
-    }
-    print('Saving preprocessed_data...')
-    save_path = open("preprocessed_data.pickle", "wb")
-    pickle.dump(preprocessed_data, save_path)
-    save_path.close()
-    
-    print('Preprocessing complete')
+        'train_iter': train_iter,
+        'valid_iter': valid_iter,
+        'test_iter': test_iter
+        }
+save_object(preprocessed, ds_name + '_preprocessed')
+
+end = time.time()
+elapsed = end - start
+print('Time elapsed: {}'.format(elapsed))
