@@ -1,5 +1,5 @@
 # Purpose: create train_iter, valid_iter, test_iter and vocab
-from data import load_tfds, save_object
+from data import load_tfds, save_json
 import time
 
 start = time.time()
@@ -16,13 +16,13 @@ for i in range(len(param)):
 print('Loading {} tensorflow dataset...'.format(ds_name))
 train_ds, valid_ds, test_ds = load_tfds(ds_name, sizes=SIZES)
 
-print('Number of training examples: {}'.format(len(train_ds[0])))
-print('Number of validation examples: {}'.format(len(valid_ds[0])))
-print('Number of testing examples: {}'.format(len(test_ds[0])))
+print('Number of training examples: {}'.format(len(train_ds['src'])))
+print('Number of validation examples: {}'.format(len(valid_ds['src'])))
+print('Number of testing examples: {}'.format(len(test_ds['src'])))
 
-save_object(train_ds, ds_name + '_preprocessed' + '_train_ds')
-save_object(valid_ds, ds_name + '_preprocessed' + '_valid_ds')
-save_object(test_ds, ds_name + '_preprocessed' + '_test_ds')
+save_json(train_ds, ds_name + '_preprocessed' + '_train_ds')
+save_json(valid_ds, ds_name + '_preprocessed' + '_valid_ds')
+save_json(test_ds, ds_name + '_preprocessed' + '_test_ds')
 
 print('Preprocessing complete')
 

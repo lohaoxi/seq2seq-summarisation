@@ -1,12 +1,12 @@
 import time
-from data import load_object, save_object
+from data import load_json, save_object
 from builder import build_vocab, build_iter
 
 start = time.time()
 ds_name = 'cnn_dailymail'
 SIZES = (1000, 1000, 1000) # train_size, valid_size, test_size
 
-MAX_VOCAB_SIZE = 30000
+MAX_VOCAB_SIZE = 80000
 VOCAB_MIN_FREQ = 5
 BATCH_SIZE = 8
 SORT_ITER = True
@@ -18,9 +18,9 @@ for i in range(len(param)):
     print(param_name[i], '=', param[i])
     
 # Load preprocessed dataset from pickle
-train_ds = load_object(ds_name + '_preprocessed' + '_train_ds')
-valid_ds = load_object(ds_name + '_preprocessed' + '_valid_ds')
-test_ds = load_object(ds_name + '_preprocessed' + '_test_ds')
+train_ds = load_json(ds_name + '_preprocessed' + '_train_ds')
+valid_ds = load_json(ds_name + '_preprocessed' + '_valid_ds')
+test_ds = load_json(ds_name + '_preprocessed' + '_test_ds')
 
 # Build vocab
 print('\nBuilding vocab')
@@ -43,6 +43,7 @@ print('Built test iterators, batch size = {}, number of batches: {}'.format(BATC
 print('Built all 3 iterators')
 
 # Save object as pickle
+
 print('\n')
 preprocessed = {
          'param': param,

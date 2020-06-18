@@ -4,7 +4,9 @@ import urllib3
 from contraction import contraction_map
 import re
 import pickle
-# from contraction import contraction_map
+import json
+from json import JSONEncoder
+from collections import namedtuple
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 tfds.disable_progress_bar()
@@ -24,7 +26,10 @@ tfds.disable_progress_bar()
 # Tensorflow dataset loading
 # =============================================================================
 
-def tfds2tuple(ds, size, desc):
+def tfds2dict(ds, size, desc):
+    # Input: ds: tfds
+    #        desc: str
+    # Output: dict
     src_lst = []
     trg_lst = []
     
@@ -36,7 +41,7 @@ def tfds2tuple(ds, size, desc):
         trg_lst.append(trg)
         if len(src_lst) == len(trg_lst) == size:
             break
-    return src_lst, trg_lst
+    return {'src': src_lst, 'trg': trg_lst}
 
 def load_tfds(ds_name, sizes):
     ds, info = tfds.load(ds_name, with_info=True)
@@ -44,9 +49,9 @@ def load_tfds(ds_name, sizes):
     valid_ds = ds['validation']
     test_ds = ds['test']
     train_size, valid_size, test_size = sizes
-    train_ds = tfds2tuple(train_ds, train_size, desc='Loading and cleaning training dataset...')
-    valid_ds = tfds2tuple(valid_ds, valid_size, desc='Loading and cleaning validation dataset...')
-    test_ds = tfds2tuple(test_ds, test_size, desc='Loading and cleaning testing dataset...')
+    train_ds = tfds2dict(train_ds, train_size, desc='Loading and cleaning training dataset...')
+    valid_ds = tfds2dict(valid_ds, valid_size, desc='Loading and cleaning validation dataset...')
+    test_ds = tfds2dict(test_ds, test_size, desc='Loading and cleaning testing dataset...')
     return (train_ds, valid_ds, test_ds)
 
 # =============================================================================
@@ -68,6 +73,19 @@ def load_object(obj_name):
     print('Loading {} from pickle...'.format(obj_name))
     obj = pickle.load(load_path)
     print('Loaded ' + obj_name + '.pickle')
+    return obj
+
+def save_json(obj, obj_name, encoder=None):
+    with open(obj_name + '.json', 'w') as fp:
+        print('Saving {} into json...'.format(obj_name))
+        json.dump(obj, fp, cls=encoder)
+    print('Saved ' + obj_name + '.json')
+
+def load_json(obj_name, decoder=None):
+    with open(obj_name + '.json', 'r') as fp:
+        print('Loading {} from json...'.format(obj_name))
+        obj = json.load(fp, object_hook=decoder)
+    print('Loaded ' + obj_name + '.json')
     return obj
 
 def save_model():
@@ -123,6 +141,12 @@ def clean_punct(sentence):
     ind = sentence.find('.')
     if ind == 0:
         sentence = sentence[1:]
+    sentence = sentence.replace(',', ' , ')
+    sentence = sentence.replace('.', ' . ')
+    sentence = sentence.replace('!', ' ! ')
+    sentence = sentence.replace('?', ' ? ')
+    sentence = sentence.replace('\'', ' \' ')
+    sentence = sentence.replace('"', ' " ')
     return sentence.strip()
 
 def clean_bracket(sentence):

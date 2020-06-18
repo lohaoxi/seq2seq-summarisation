@@ -26,7 +26,7 @@ def pad(seq_lst):
         padded[i, 0:l] = np.array(seq_lst[i])
     return padded
 
-def build_vocab(ds, max_size=30000, min_freq=2):
+def build_vocab(ds, max_size=80000, min_freq=2):
     
     punct = ['.', ',', '!', '?', '\'', '"']
     adding_words = 'Adding words...'
@@ -35,7 +35,8 @@ def build_vocab(ds, max_size=30000, min_freq=2):
     vocab = Vocab()
     
     # Add words in vocab
-    src_lst, trg_lst = ds
+    src_lst = ds['src']
+    trg_lst = ds['trg']
     for src, trg in tqdm(zip(src_lst, trg_lst), desc=adding_words):
         words = src + trg
         for word in words:
@@ -69,7 +70,8 @@ def build_iter(ds, vocab, batch_size, sort=True, torch_tensor=False):
     making_minbatches = 'Making minibatches...'
     padding_minibatches = 'Padding minibatches...'
     
-    src_lst, trg_lst = ds
+    src_lst = ds['src']
+    trg_lst = ds['trg']
     batches = []
     for src, trg in tqdm(zip(src_lst, trg_lst), desc=converting_int):
         src = sent2seq(src, vocab)
