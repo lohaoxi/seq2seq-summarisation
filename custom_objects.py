@@ -19,17 +19,12 @@ class Vocab:
         self.n_words = len(self.index2word)
         
     def __getitem__(self, i):
-        # Input: 1 index: int / 1 word: str
-        # Output 1 str / 1 int
-        # Do: return the corresponding word / index
         if type(i) == int:
             return str(self.index2word[i])
         elif type(i) == str:
             return int(self.word2index.get(i, self.UNK)) # Return the index of <UNK> if input word is not in the vocab
     
     def add_word(self, word):
-        # Input: word: 1 str
-        # Do: add the string into vocab
         if word not in self.word2index:
             self.word2index[word] = self.n_words
             self.index2word.append(word)
