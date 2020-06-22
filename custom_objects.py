@@ -37,7 +37,7 @@ class Vocab:
         self.word2count[word] += 1
         
 class JSONDataset(IterableDataset):
-    
+    # https://medium.com/speechmatics/how-to-build-a-streaming-dataloader-with-pytorch-a66dd891d9dd
     def __init__(self, ds_name, split, size):
         self.file_path = ds_name + '_' + str(split) + '_'
         self.size = size
